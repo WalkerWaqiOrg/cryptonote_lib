@@ -81,6 +81,39 @@ if(APPLE)
   endif()
 endif()
 
+if(MSVC OR MINGW)
+  set(DEFAULT_STATIC true)
+else()
+  set(DEFAULT_STATIC false)
+endif()
+option(STATIC "Link libraries statically" ${DEFAULT_STATIC})
+
+# This is a CMake built-in switch that concerns internal libraries
+if (NOT DEFINED BUILD_SHARED_LIBS AND NOT STATIC AND CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
+    set(BUILD_SHARED_LIBS ON)
+endif()
+
+if (BUILD_SHARED_LIBS)
+  message(STATUS "Building internal libraries with position independent code")
+  set(PIC_FLAG "-fPIC")
+  add_definitions("-DBUILD_SHARED_LIBS")
+else()
+  message(STATUS "Building internal libraries as static")
+endif()
+
+if(MINGW)
+  string(REGEX MATCH "^[^/]:/[^/]*" msys2_install_path "${CMAKE_C_COMPILER}")
+  message(STATUS "MSYS location: ${msys2_install_path}")
+  set(CMAKE_INCLUDE_PATH "${msys2_install_path}/mingw${ARCH_WIDTH}/include")
+  # This is necessary because otherwise CMake will make Boost libraries -lfoo
+  # rather than a full path. Unfortunately, this makes the shared libraries get
+  # linked due to a bug in CMake which misses putting -static flags around the
+  # -lfoo arguments.
+  set(DEFLIB ${msys2_install_path}/mingw${ARCH_WIDTH}/lib)
+  list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_DIRECTORIES ${DEFLIB})
+  list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES ${DEFLIB})
+endif()
+
 if(STATIC)
   if(MSVC)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .dll.a .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
