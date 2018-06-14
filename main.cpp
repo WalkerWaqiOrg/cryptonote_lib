@@ -1,136 +1,65 @@
 #include "hash.h"
-#include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <string>
 #include <iostream>
 
-//----------------------------------------------------------------------------
-inline bool trim_left(std::string& str)
+
+char *bin2hex(const unsigned char *p, size_t len)
 {
-    for(std::string::iterator it = str.begin(); it!= str.end() && isspace(static_cast<unsigned char>(*it));)
-        str.erase(str.begin());
-        
-    return true;
+	size_t i;
+	char *s = (char *)malloc((len * 2) + 1);
+	if (!s)
+		return NULL;
+
+	for (i = 0; i < len; i++)
+		sprintf(s + (i * 2), "%02x", (unsigned int) p[i]);
+
+	return s;
 }
 
-//----------------------------------------------------------------------------
-inline bool trim_right(std::string& str)
+int hex2bin(unsigned char *p, const char *hexstr, size_t len)
 {
+	char hex_byte[3];
+	char *ep;
 
-    for(std::string::reverse_iterator it = str.rbegin(); it!= str.rend() && isspace(static_cast<unsigned char>(*it));)
-        str.erase( --((it++).base()));
+	hex_byte[2] = '\0';
 
-    return true;
+	while (*hexstr && len) {
+		if (!hexstr[1]) {
+			//applog(LOG_ERR, "hex2bin str truncated");
+			return 0;
+		}
+		hex_byte[0] = hexstr[0];
+		hex_byte[1] = hexstr[1];
+		*p = (unsigned char) strtol(hex_byte, &ep, 16);
+		if (*ep) {
+			//applog(LOG_ERR, "hex2bin failed on '%s'", hex_byte);
+			return 0;
+		}
+		p++;
+		hexstr += 2;
+		len--;
+	}
+
+	return (len == 0 && *hexstr == 0) ? 1 : 0;
 }
 
-//----------------------------------------------------------------------------
-inline std::string& trim(std::string& str)
+
+int main()
 {
+	unsigned char data[13]={0};
+	hex2bin(data,"63617665617420656d70746f72",sizeof(data));
 
-    trim_left(str);
-    trim_right(str);
-    return str;
-}
+	char hash[32]={0};
+	crypto::cn_slow_hash(data, sizeof(data), hash);
 
-//----------------------------------------------------------------------------
-inline std::string trim(const std::string& str_)
-{
-    std::string str = str_;
-    trim_left(str);
-    trim_right(str);
-    return str;
-}
+    char *hashstr=bin2hex((const unsigned char *)hash,sizeof(hash));
+	printf("%s\r\n",hashstr);
 
-//----------------------------------------------------------------------------
-template<class CharT>
-bool parse_hexstr_to_binbuff(const std::basic_string<CharT>& s, std::basic_string<CharT>& res, bool allow_partial_byte = false)
-{
-    res.clear();
-    if (!allow_partial_byte && (s.size() & 1))
-        return false;
-    try
-    {
-        long v = 0;
-        for(size_t i = 0; i < (s.size() + 1) / 2; i++)
-        {
-        CharT byte_str[3];
-        size_t copied = s.copy(byte_str, 2, 2 * i);
-        byte_str[copied] = CharT(0);
-        CharT* endptr;
-        v = strtoul(byte_str, &endptr, 16);
-        if (v < 0 || 0xFF < v || endptr != byte_str + copied)
-        {
-            return false;
-        }
-        res.push_back(static_cast<unsigned char>(v));
-        }
-
-        return true;
-    }catch(...)
-    {
-        return false;
-    }
-}
-
-template<class t_pod_type>
-bool hex_to_pod(const std::string& hex_str, t_pod_type& s)
-{
-    static_assert(std::is_pod<t_pod_type>::value, "expected pod type");
-    std::string hex_str_tr = trim(hex_str);
-    if(sizeof(s)*2 != hex_str.size())
-        return false;
-    std::string bin_buff;
-    if(!parse_hexstr_to_binbuff(hex_str_tr, bin_buff))
-        return false;
-    if(bin_buff.size()!=sizeof(s))
-        return false;
-
-    s = *(t_pod_type*)bin_buff.data();
-    return true;
-}
-
-class test_cn_slow_hash
-{
-public:
-    static const size_t loop_count = 10;
-
-#pragma pack(push, 1)
-  struct data_t
-  {
-    char data[13];
-  };
-#pragma pack(pop)
-
-  static_assert(13 == sizeof(data_t), "Invalid structure size");
-
-  bool init()
-  {
-    if (!hex_to_pod("63617665617420656d70746f72", m_data))
-      return false;
-
-    if (!hex_to_pod("23bf2e70f9d7f3d017297dd7ebf62a302198c1b598115b5230579141f2824f8d", m_expected_hash))
-      return false;
-
-    return true;
-  }
-
-  bool test()
-  {
-    crypto::hash hash;
-    crypto::cn_slow_hash(&m_data, sizeof(m_data), hash);
-
-    return hash == m_expected_hash;
-  }
-
-private:
-    data_t m_data;
-    crypto::hash m_expected_hash;
-};
-
-int main(int argc, char const *argv[])
-{
-    test_cn_slow_hash test_slow_demo;
-    test_slow_demo.init();
-    if(test_slow_demo.test())
+    std::string expected_hash("23bf2e70f9d7f3d017297dd7ebf62a302198c1b598115b5230579141f2824f8d");
+    if(expected_hash == hashstr)
     {
         std::cout << "hash result is ok!" << std::endl;
     }
@@ -138,5 +67,6 @@ int main(int argc, char const *argv[])
     {
         std::cout << "hash result is error!" << std::endl;
     }
-    return 0;
+	return 0;
 }
+
