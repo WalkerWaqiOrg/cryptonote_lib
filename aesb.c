@@ -126,9 +126,9 @@ extern "C"
 #define fd(x)   (f8(x) ^ f4(x) ^ x)
 #define fe(x)   (f8(x) ^ f4(x) ^ f2(x))
 
-#define t_dec(m,n) t_##m##n
-#define t_set(m,n) t_##m##n
-#define t_use(m,n) t_##m##n
+#define t_dec(m,n) t_##m##n##_
+#define t_set(m,n) t_##m##n##_
+#define t_use(m,n) t_##m##n##_
 
 #define d_4(t,n,b,e,f,g,h) ALIGN const t n[4][256] = { b(e), b(f), b(g), b(h) }
 
@@ -148,7 +148,7 @@ d_4(uint32_t, t_dec(f,n), sb_data, u0, u1, u2, u3);
 #define INLINE
 #endif
 
-STATIC INLINE void aesb_single_round(const uint8_t *in, uint8_t *out, uint8_t *expandedKey)
+STATIC INLINE void aesb_single_round_(const uint8_t *in, uint8_t *out, uint8_t *expandedKey)
 {
   uint32_t b0[4], b1[4];
   const uint32_t  *kp = (uint32_t *) expandedKey;

@@ -49,7 +49,7 @@ typedef struct {
 	unsigned long long data[4];
 } FourInt64;
 
-extern int aesb_single_round(const uint8_t *in, uint8_t*out, const uint8_t *expandedKey);
+extern int aesb_single_round_(const uint8_t *in, uint8_t*out, const uint8_t *expandedKey);
 extern int aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 
 #if defined(__x86_64__) || (defined(_MSC_VER) && defined(_WIN64))
@@ -666,7 +666,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash)
         for(i = 0; i < ITER / 2; i++)
         {
             pre_aes();
-            aesb_single_round((uint8_t *) &_c, (uint8_t *) &_c, (uint8_t *) &_a);
+            aesb_single_round_((uint8_t *) &_c, (uint8_t *) &_c, (uint8_t *) &_a);
             post_aes();
 
 			//New Code begin
@@ -1212,7 +1212,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash)
 
       // Iteration 1
       p = &long_state[state_index(a)];
-      aesb_single_round(p, p, a);
+      aesb_single_round_(p, p, a);
 
       xor_blocks(b, p);
       swap_blocks(b, p);
@@ -1269,7 +1269,7 @@ static void (*const extra_hashes[4])(const void *, size_t, char *) = {
   hash_extra_blake, hash_extra_groestl, hash_extra_jh, hash_extra_skein
 };
 
-extern int aesb_single_round(const uint8_t *in, uint8_t*out, const uint8_t *expandedKey);
+extern int aesb_single_round_(const uint8_t *in, uint8_t*out, const uint8_t *expandedKey);
 extern int aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 
 static size_t e2i(const uint8_t* a, size_t count) { return (*((uint64_t*)a) / AES_BLOCK_SIZE) & (count - 1); }
@@ -1368,7 +1368,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash) {
     /* Iteration 1 */
     j = e2i(a, MEMORY / AES_BLOCK_SIZE);
     copy_block(c, &long_state[j * AES_BLOCK_SIZE]);
-    aesb_single_round(c, c, a);
+    aesb_single_round_(c, c, a);
     xor_blocks(b, c);
     swap_blocks(b, c);
     copy_block(&long_state[j * AES_BLOCK_SIZE], c);
